@@ -1,0 +1,49 @@
+# Visual Studio cache / user settings (locked by VS, never commit)
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM64/
+*.log
+
+# MSIX / packaging
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+_pkginfo.txt
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+
+# NuGet
+*.nupkg
+**/[Pp]ackages/*
+project.lock.json
+.nuget/
+
+# Signing certificates / secrets (never commit)
+*.pfx
+*.snk
+*.p12
+*.key
+
+# Local session data of the app (cookies, secretKey...)
+*.sqlite
+*.db
+session.json
+
+# Misc
+.DS_Store
+Thumbs.db
+*.tmp
+*.rsuser

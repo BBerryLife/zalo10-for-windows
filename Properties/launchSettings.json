@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "zalo10-for-windows (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "zalo10-for-windows (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
