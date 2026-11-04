@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="zalo10_for_windows.Views.MainShell"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="using:zalo10_for_windows.Views">
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="RailBrush" Color="#0068FF"/>
+        <SolidColorBrush x:Key="RailSelectedBrush" Color="#0052CC"/>
+
+        <!-- Flat icon button for the blue sidebar: white icon, translucent highlight on hover/press. -->
+        <Style x:Key="RailButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="Root" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal"/>
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="Root.Background" Value="#33FFFFFF"/>
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <VisualState.Setters>
+                                            <Setter Target="Root.Background" Value="#4DFFFFFF"/>
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="64"/>
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Column 0: blue sidebar -->
+        <Grid Grid.Column="0" Background="{StaticResource RailBrush}">
+            <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center" Padding="0,16,0,0" Spacing="4">
+                <PersonPicture x:Name="Avatar" Width="44" Height="44" Margin="0,0,0,12"/>
+
+                <Button x:Name="ChatNav" Style="{StaticResource RailButtonStyle}"
+                        Background="{StaticResource RailSelectedBrush}" Click="Nav_Click"
+                        ToolTipService.ToolTip="Tin nhắn">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8BD;" FontSize="22" Foreground="White"/>
+                </Button>
+                <Button x:Name="ContactsNav" Style="{StaticResource RailButtonStyle}" Click="Nav_Click"
+                        ToolTipService.ToolTip="Danh bạ">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE77B;" FontSize="22" Foreground="White"/>
+                </Button>
+            </StackPanel>
+
+            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Padding="0,0,0,16" Spacing="4">
+                <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Cloud của tôi">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE753;" FontSize="22" Foreground="White"/>
+                </Button>
+                <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Kho lưu trữ">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8B7;" FontSize="22" Foreground="White"/>
+                </Button>
+                <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Công cụ">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE821;" FontSize="22" Foreground="White"/>
+                </Button>
+                <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Cài đặt">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE713;" FontSize="22" Foreground="White"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Column 1: conversation list -->
+        <Grid Grid.Column="1" Background="{ThemeResource LayerFillColorDefaultBrush}"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Padding="16,16,12,8" ColumnSpacing="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <AutoSuggestBox Grid.Column="0" PlaceholderText="Tìm kiếm" QueryIcon="Find"/>
+                <Button Grid.Column="1" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Thêm bạn">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8FA;" FontSize="16"/>
+                </Button>
+                <Button Grid.Column="2" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Tạo nhóm">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE716;" FontSize="16"/>
+                </Button>
+            </Grid>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Padding="8,0,8,4">
+                <HyperlinkButton x:Name="TabPriority" Content="Ưu tiên" FontWeight="SemiBold" Click="Tab_Click"/>
+                <HyperlinkButton x:Name="TabOther" Content="Khác" Opacity="0.6" Click="Tab_Click"/>
+            </StackPanel>
+
+            <Grid Grid.Row="2">
+                <ListView x:Name="ConversationList" ItemsSource="{x:Bind Conversations}" SelectionMode="Single"
+                          SelectionChanged="ConversationList_SelectionChanged">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="views:ConversationItem">
+                            <Grid ColumnSpacing="12" Padding="0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <PersonPicture Grid.Column="0" Width="44" Height="44" DisplayName="{x:Bind Title}" ProfilePicture="{x:Bind Picture}"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="{x:Bind Title}" FontSize="15" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{x:Bind Preview}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{x:Bind Time}" FontSize="12" VerticalAlignment="Top"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <TextBlock x:Name="EmptyText" Text="Đang tải danh sách..." TextAlignment="Center" TextWrapping="Wrap" Margin="24" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </Grid>
+        </Grid>
+
+        <!-- Column 2: welcome panel until a conversation is opened, then the chat -->
+        <Grid Grid.Column="2" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid x:Name="WelcomeHost">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="520">
+                    <Image Source="ms-appx:///Assets/Square150x150Logo.png" Width="120" Height="120"/>
+                    <TextBlock Text="Chào mừng đến với Zalo10!" FontSize="26" TextAlignment="Center"/>
+                    <TextBlock Text="Ứng dụng Zalo cho Windows, xây dựng từ dự án Zalo10 dành cho BlackBerry 10."
+                               TextWrapping="Wrap" TextAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+                <TextBlock x:Name="StatusLine" Margin="16" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                           FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </Grid>
+            <views:ChatView x:Name="Chat" Visibility="Collapsed"/>
+        </Grid>
+    </Grid>
+</UserControl>
