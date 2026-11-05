@@ -34,7 +34,7 @@ namespace zalo10_for_windows
             var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Zalo10.ico");
             if (File.Exists(icon)) AppWindow.SetIcon(icon);
 
-            Closed += (_, _) => _cts.Cancel();
+            Closed += (_, _) => { _cts.Cancel(); StopRealtime(); };
 
             Shell.ConversationSelected += c => _ = OpenConversationAsync(c);
             Shell.SendRequested += (c, text) => _ = SendMessageAsync(c, text);
@@ -179,6 +179,7 @@ namespace zalo10_for_windows
             Shell.Visibility = Visibility.Visible;
             Shell.SetUser(_session.DisplayName);
             _ = LoadConversationsAsync();
+            StartRealtime();
         }
 
         // ---- real data ---------------------------------------------------------------------------
@@ -229,9 +230,75 @@ namespace zalo10_for_windows
         }
 
 
+        // ---- realtime (WebSocket) ----------------------------------------------------------------
+        private ZaloWebSocket? _ws;
+        private readonly HashSet<string> _historyLoaded = new();
+
+        private void StartRealtime()
+        {
+            StopRealtime();
+            var ws = new ZaloWebSocket(_http, _session);
+            // Events come from a background thread: hop to the UI thread before touching anything visible.
+            ws.MessagesReceived += msgs => UI(() => OnIncoming(msgs));
+            ws.MessageRecalled += r => UI(() => OnRecalled(r));
+            ws.ConnectionChanged += connected => UI(() => Shell.SetConnectionState(connected));
+            _ws = ws;
+            ws.Start();
+        }
+
+        private void StopRealtime()
+        {
+            _ws?.Dispose();
+            _ws = null;
+        }
+
+        /// <summary>Adds to the per-conversation cache; false if that message id is already there.</summary>
+        private bool AddToCache(string threadId, ChatMessage m)
+        {
+            if (!_chatCache.TryGetValue(threadId, out var list))
+                _chatCache[threadId] = list = new List<ChatMessage>();
+            if (m.MsgId.Length > 0 && list.Any(x => x.MsgId == m.MsgId)) return false;
+            list.Add(m);
+            return true;
+        }
+
+        private static List<ChatMessage> Sorted(IEnumerable<ChatMessage> msgs) =>
+            msgs.OrderBy(m => m.TimeMs).ThenBy(m => m.MsgId, StringComparer.Ordinal).ToList();
+
+        private static string OneLine(string text) => text.Replace("\r", "").Replace('\n', ' ');
+
+        private void OnIncoming(IReadOnlyList<WsMessage> msgs)
+        {
+            foreach (var w in msgs)
+            {
+                if (!AddToCache(w.ThreadId, w.Message)) continue; // already shown (for example the echo of a message we just sent)
+
+                Shell.AddChatMessage(w.ThreadId, ToItem(w.Message, w.IsGroup));
+
+                string text = OneLine(w.Message.Text);
+                string preview = w.Message.IsMine ? "Bạn: " + text
+                    : w.IsGroup && w.Message.SenderName.Length > 0 ? $"{w.Message.SenderName}: {text}"
+                    : text;
+                Shell.Bump(w.ThreadId, preview, MessageItem.FormatTime(w.Message.TimeMs));
+            }
+        }
+
+        private void OnRecalled(WsRecall r)
+        {
+            if (!_chatCache.TryGetValue(r.ThreadId, out var list)) return;
+            int i = list.FindIndex(x => x.MsgId == r.MsgId);
+            if (i < 0) return;
+
+            var updated = list[i] with { Text = "Tin nhắn đã được thu hồi" };
+            list[i] = updated;
+            bool isGroup = Shell.Conversations.FirstOrDefault(c => c.ThreadId == r.ThreadId)?.IsGroup ?? false;
+            Shell.ReplaceChatMessage(r.ThreadId, r.MsgId, ToItem(updated, isGroup));
+        }
+
         // ---- chat ----------------------------------------------------------------------------------
         private MessageItem ToItem(ChatMessage m, bool isGroup) => new()
         {
+            MsgId = m.MsgId,
             Text = m.Text,
             Sender = m.SenderName,
             TimeText = MessageItem.FormatTime(m.TimeMs),
@@ -242,30 +309,38 @@ namespace zalo10_for_windows
         private async Task OpenConversationAsync(ConversationItem c)
         {
             var ct = _cts.Token;
+            string id = c.ThreadId;
 
-            if (c.IsGroup)
+            // Show what we already have straight away (messages pushed or sent in this session).
+            _chatCache.TryGetValue(id, out var cached);
+            bool hadCache = cached is { Count: > 0 };
+            if (hadCache) Shell.SetChatMessages(id, Sorted(cached!).Select(m => ToItem(m, c.IsGroup)), null, null);
+
+            if (_historyLoaded.Contains(id))
             {
-                var r = await new ZaloApi(_http, _session).GetGroupHistoryAsync(c.ThreadId, ct);
-                if (ct.IsCancellationRequested) return;
-
-                if (r.Status == ApiStatus.SessionExpired) { await ReturnToLoginAsync(); return; }
-                if (r.Status != ApiStatus.Ok)
-                {
-                    Shell.SetChatMessages(c.ThreadId, Array.Empty<MessageItem>(),
-                        $"Không tải được tin nhắn.\n{r.Message}", null);
-                    return;
-                }
-                _chatCache[c.ThreadId] = r.Value ?? new List<ChatMessage>();
+                if (!hadCache) Shell.SetChatMessages(id, Array.Empty<MessageItem>(), "Chưa có tin nhắn", null);
+                return;
             }
 
-            _chatCache.TryGetValue(c.ThreadId, out var msgs);
-            string? note = c.IsGroup
-                ? null
-                : "Lịch sử tin nhắn riêng chỉ có qua kết nối WebSocket (chưa làm), nên chưa hiển thị. Bạn vẫn gửi được tin nhắn.";
+            // History only exists on the WebSocket (the HTTP history endpoint now returns a web page).
+            var ws = _ws;
+            List<WsMessage>? history = ws == null ? null : await ws.RequestHistoryAsync(id, c.IsGroup, ct);
+            if (ct.IsCancellationRequested) return;
 
-            Shell.SetChatMessages(c.ThreadId,
-                (msgs ?? new List<ChatMessage>()).Select(m => ToItem(m, c.IsGroup)),
-                c.IsGroup ? "Chưa có tin nhắn" : "Chưa có tin nhắn trong phiên này", note);
+            if (history == null)
+            {
+                if (!hadCache)
+                    Shell.SetChatMessages(id, Array.Empty<MessageItem>(),
+                        "Không tải được lịch sử tin nhắn.\nKết nối tin nhắn chưa sẵn sàng, hãy mở lại hội thoại sau vài giây.", null);
+                return;
+            }
+
+            foreach (var h in history) AddToCache(id, h.Message);
+            _historyLoaded.Add(id);
+
+            _chatCache.TryGetValue(id, out var all);
+            Shell.SetChatMessages(id, Sorted(all ?? new List<ChatMessage>()).Select(m => ToItem(m, c.IsGroup)),
+                "Chưa có tin nhắn", null);
         }
 
         private async Task SendMessageAsync(ConversationItem c, string text)
@@ -277,10 +352,10 @@ namespace zalo10_for_windows
             switch (r.Status)
             {
                 case ApiStatus.Ok when r.Value != null:
-                    if (!_chatCache.TryGetValue(c.ThreadId, out var list))
-                        _chatCache[c.ThreadId] = list = new List<ChatMessage>();
-                    list.Add(r.Value);
-                    Shell.AddChatMessage(c.ThreadId, ToItem(r.Value, c.IsGroup));
+                    // The WebSocket may already have delivered the echo of this message: AddToCache then says "not new".
+                    if (AddToCache(c.ThreadId, r.Value))
+                        Shell.AddChatMessage(c.ThreadId, ToItem(r.Value, c.IsGroup));
+                    Shell.Bump(c.ThreadId, "Bạn: " + OneLine(text), MessageItem.FormatTime(r.Value.TimeMs));
                     break;
 
                 case ApiStatus.SessionExpired:
@@ -297,6 +372,9 @@ namespace zalo10_for_windows
         /// <summary>Zalo rejected the session mid-use (error 600): forget it and show the QR again.</summary>
         private async Task ReturnToLoginAsync()
         {
+            StopRealtime();
+            _chatCache.Clear();
+            _historyLoaded.Clear();
             await ZaloSessionStore.DeleteAsync();
             StartFresh();
             Shell.Visibility = Visibility.Collapsed;

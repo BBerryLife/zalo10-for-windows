@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -10,18 +12,34 @@ using Microsoft.UI.Xaml.Media.Imaging;
 namespace zalo10_for_windows.Views
 {
     /// <summary>One row of the conversation list.</summary>
-    public sealed class ConversationItem
+    public sealed class ConversationItem : INotifyPropertyChanged
     {
+        private string _preview;
+        private string _time;
+
         public ConversationItem(string title, string preview, string time)
         {
             Title = title;
-            Preview = preview;
-            Time = time;
+            _preview = preview;
+            _time = time;
         }
 
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         public string Title { get; set; }
-        public string Preview { get; set; }
-        public string Time { get; set; }
+
+        /// <summary>Second line of the row: last message, or "Nhóm" for a group.</summary>
+        public string Preview
+        {
+            get => _preview;
+            set { if (_preview != value) { _preview = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Preview))); } }
+        }
+
+        public string Time
+        {
+            get => _time;
+            set { if (_time != value) { _time = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Time))); } }
+        }
 
         /// <summary>Zalo user id (friend) or group id: what the chat view will need later.</summary>
         public string ThreadId { get; set; } = "";
@@ -67,6 +85,8 @@ namespace zalo10_for_windows.Views
         public event Action<ConversationItem, string>? SendRequested;
 
         private ConversationItem? _current;
+        private bool _suppressSelection;
+        private string _user = "";
 
         public MainShell()
         {
@@ -83,6 +103,7 @@ namespace zalo10_for_windows.Views
         // ---- chat -----------------------------------------------------------------------------------
         private void ConversationList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_suppressSelection) return;
             if (ConversationList.SelectedItem is not ConversationItem c) return;
             _current = c;
             WelcomeHost.Visibility = Visibility.Collapsed;
@@ -103,6 +124,11 @@ namespace zalo10_for_windows.Views
             if (_current?.ThreadId == threadId) Chat.Add(item);
         }
 
+        public void ReplaceChatMessage(string threadId, string msgId, MessageItem item)
+        {
+            if (_current?.ThreadId == threadId) Chat.Replace(msgId, item);
+        }
+
         public void SetChatStatus(string threadId, string? text)
         {
             if (_current?.ThreadId == threadId) Chat.SetStatus(text);
@@ -115,8 +141,35 @@ namespace zalo10_for_windows.Views
 
         public void SetUser(string displayName)
         {
+            _user = displayName;
             Avatar.DisplayName = displayName;
             StatusLine.Text = $"Đã đăng nhập: {displayName}";
+        }
+
+        public void SetConnectionState(bool connected) =>
+            StatusLine.Text = $"Đã đăng nhập: {_user} · " + (connected ? "đã kết nối" : "đang kết nối lại...");
+
+        /// <summary>A message arrived or was sent: refresh the row's preview and move it to the top.</summary>
+        public void Bump(string threadId, string preview, string time)
+        {
+            var item = Conversations.FirstOrDefault(c => c.ThreadId == threadId);
+            if (item == null) return;
+
+            item.Preview = preview;
+            item.Time = time;
+
+            int index = Conversations.IndexOf(item);
+            if (index <= 0) return;
+
+            // Moving a row can drop the list selection; put it back without reopening the chat.
+            bool wasOpen = ReferenceEquals(_current, item);
+            _suppressSelection = true;
+            try
+            {
+                Conversations.Move(index, 0);
+                if (wasOpen) ConversationList.SelectedItem = item;
+            }
+            finally { _suppressSelection = false; }
         }
 
         public void SetConversations(IEnumerable<ConversationItem> items)

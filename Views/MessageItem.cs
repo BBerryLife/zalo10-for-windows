@@ -13,6 +13,7 @@ namespace zalo10_for_windows.Views
         private static Brush MineBrush => _mine ??= new SolidColorBrush(ColorHelper.FromArgb(255, 213, 232, 255));
         private static Brush OtherBrush => _other ??= new SolidColorBrush(ColorHelper.FromArgb(255, 255, 255, 255));
 
+        public string MsgId { get; set; } = "";
         public string Text { get; set; } = "";
         public string Sender { get; set; } = "";
         public string TimeText { get; set; } = "";

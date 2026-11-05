@@ -266,7 +266,7 @@ namespace zalo10_for_windows.Core
         }
 
         // ---- message content -> readable text ------------------------------------------------------
-        private static JsonDocument ContentObject(JsonElement m)
+        internal static JsonDocument ContentObject(JsonElement m)
         {
             // content may be an object, or a JSON object serialised into a string.
             if (m.TryGetProperty("content", out var c))
@@ -286,7 +286,7 @@ namespace zalo10_for_windows.Core
         }
 
         /// <summary>Plain text stays text; photos, stickers, files, calls and links become a short label.</summary>
-        private static string Describe(string type, JsonElement m)
+        internal static string Describe(string type, JsonElement m)
         {
             if (!m.TryGetProperty("content", out var c)) return "";
 
@@ -333,11 +333,16 @@ namespace zalo10_for_windows.Core
         {
             string raw = await resp.Content.ReadAsStringAsync(ct);
 
-            if ((int)resp.StatusCode == 429 || raw.Contains("429 Too Many Requests") ||
-                raw.Contains("<html", StringComparison.OrdinalIgnoreCase))
+            if ((int)resp.StatusCode == 429 || raw.Contains("429 Too Many Requests"))
             {
                 Log($"{name}: bi gioi han toc do (429)");
                 return new ApiReply(ApiStatus.RateLimited, "Zalo đang giới hạn tốc độ, hãy thử lại sau");
+            }
+            if (raw.TrimStart().StartsWith("<", StringComparison.Ordinal))
+            {
+                // An HTML page instead of JSON: the endpoint is gone or blocked (not the same as being rate limited).
+                Log($"{name}: nhan trang HTML thay vi JSON (HTTP {(int)resp.StatusCode})");
+                return new ApiReply(ApiStatus.Failed, $"Máy chủ trả về trang web thay vì dữ liệu (HTTP {(int)resp.StatusCode})");
             }
 
             JsonDocument outer;
@@ -409,7 +414,7 @@ namespace zalo10_for_windows.Core
             return Enumerable.Empty<JsonElement>();
         }
 
-        private static string FirstNonEmpty(JsonElement e, params string[] names)
+        internal static string FirstNonEmpty(JsonElement e, params string[] names)
         {
             foreach (var n in names)
             {
@@ -430,7 +435,7 @@ namespace zalo10_for_windows.Core
             };
         }
 
-        private static string Str(JsonElement e, string name)
+        internal static string Str(JsonElement e, string name)
         {
             if (e.ValueKind != JsonValueKind.Object || !e.TryGetProperty(name, out var v)) return "";
             return v.ValueKind switch

@@ -66,6 +66,22 @@ namespace zalo10_for_windows.Core
         public string CookieSummary() =>
             string.Join(", ", _jar.GetAllCookies().Cast<Cookie>().Select(c => $"{c.Name}[{c.Domain}]"));
 
+        /// <summary>
+        /// Cookie header for the WebSocket upgrade. Zalo10 sends every cookie it has; here that means every
+        /// cookie of the zalo.me family (zaloapp.com ones are left out so same-named cookies do not clash).
+        /// </summary>
+        public string CookieHeaderForZaloMe()
+        {
+            var byName = new Dictionary<string, string>();
+            foreach (Cookie c in _jar.GetAllCookies())
+            {
+                string d = c.Domain.TrimStart('.');
+                if (d == "zalo.me" || d.EndsWith(".zalo.me", StringComparison.OrdinalIgnoreCase))
+                    byName[c.Name] = c.Value;
+            }
+            return string.Join("; ", byName.Select(kv => $"{kv.Key}={kv.Value}"));
+        }
+
         public List<CookieData> ExportCookies() =>
             _jar.GetAllCookies().Cast<Cookie>()
                 .Where(c => !c.Expired)

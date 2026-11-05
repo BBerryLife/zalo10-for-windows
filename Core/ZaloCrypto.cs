@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -117,6 +119,125 @@ namespace zalo10_for_windows.Core
         {
             try { return Decrypt(KeyBase64(secretKeyB64), cipherB64); }
             catch (FormatException) { return null; }
+        }
+
+        // ---- AES-GCM with a 16-byte IV (WebSocket payloads) -----------------------------------------
+        //
+        // Zalo's WebSocket uses AES-GCM with a 16-byte IV, but System.Security.Cryptography.AesGcm only
+        // accepts 12-byte nonces. So GCM is built here on top of plain AES block encryption (ECB, one
+        // block at a time): CTR keystream + GHASH. Verified against Python's `cryptography` in tests.
+        //
+        // Wire layout: iv(16) | aad(16) | ciphertext | tag(16)
+
+        private static void GfMul(byte[] x, byte[] h, byte[] z)
+        {
+            Array.Clear(z, 0, 16);
+            var v = (byte[])h.Clone();
+            for (int i = 0; i < 128; i++)
+            {
+                if ((x[i >> 3] & (0x80 >> (i & 7))) != 0)
+                    for (int k = 0; k < 16; k++) z[k] ^= v[k];
+
+                bool lsb = (v[15] & 1) != 0;
+                for (int k = 15; k > 0; k--) v[k] = (byte)((v[k] >> 1) | (v[k - 1] << 7));
+                v[0] >>= 1;
+                if (lsb) v[0] ^= 0xE1;
+            }
+        }
+
+        /// <summary>Folds data (zero-padded to 16-byte blocks) into the running GHASH value y.</summary>
+        private static void GhashUpdate(byte[] h, byte[] y, ReadOnlySpan<byte> data)
+        {
+            var block = new byte[16];
+            var tmp = new byte[16];
+            for (int off = 0; off < data.Length; off += 16)
+            {
+                Array.Clear(block, 0, 16);
+                data.Slice(off, Math.Min(16, data.Length - off)).CopyTo(block);
+                for (int k = 0; k < 16; k++) y[k] ^= block[k];
+                GfMul(y, h, tmp);
+                Array.Copy(tmp, y, 16);
+            }
+        }
+
+        private static void PutLengths(byte[] block, long aBits, long cBits)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                block[7 - i] = (byte)(aBits >> (8 * i));
+                block[15 - i] = (byte)(cBits >> (8 * i));
+            }
+        }
+
+        /// <summary>Returns the plaintext, or null if the key is unusable, the data too short or the tag does not match.</summary>
+        public static byte[]? AesGcmDecrypt(byte[] keyRaw, byte[] data)
+        {
+            if (data.Length < 48) return null;
+
+            byte[] key = keyRaw;
+            if (key.Length != 16 && key.Length != 24 && key.Length != 32)
+            {
+                try { key = FromBase64Lenient(Encoding.UTF8.GetString(keyRaw)); }
+                catch (FormatException) { return null; }
+                if (key.Length != 16 && key.Length != 24 && key.Length != 32) return null;
+            }
+
+            int ctLen = data.Length - 48;
+            if (ctLen <= 0) return null;
+            var iv = data.AsSpan(0, 16);
+            var aad = data.AsSpan(16, 16);
+            var ct = data.AsSpan(32, ctLen);
+            var tag = data.AsSpan(32 + ctLen, 16);
+
+            using var aes = Aes.Create();
+            aes.Key = key;
+            byte[] Ecb(byte[] block) => aes.EncryptEcb(block, PaddingMode.None);
+
+            byte[] h = Ecb(new byte[16]);
+
+            // J0 = GHASH(IV || 0^64 || [len(IV) in bits]_64) because the IV is not 12 bytes.
+            var j0 = new byte[16];
+            GhashUpdate(h, j0, iv);
+            var lenBlock = new byte[16];
+            PutLengths(lenBlock, 0, iv.Length * 8L);
+            GhashUpdate(h, j0, lenBlock);
+
+            // Authentication tag = AES(J0) xor GHASH(aad, ciphertext, lengths)
+            var s = new byte[16];
+            GhashUpdate(h, s, aad);
+            GhashUpdate(h, s, ct);
+            PutLengths(lenBlock, aad.Length * 8L, ct.Length * 8L);
+            GhashUpdate(h, s, lenBlock);
+            var ej0 = Ecb(j0);
+            var expected = new byte[16];
+            for (int k = 0; k < 16; k++) expected[k] = (byte)(ej0[k] ^ s[k]);
+            if (!CryptographicOperations.FixedTimeEquals(expected, tag)) return null;
+
+            // CTR decryption, counter starts at inc32(J0)
+            var counter = (byte[])j0.Clone();
+            var plain = new byte[ctLen];
+            for (int off = 0; off < ctLen; off += 16)
+            {
+                for (int k = 15; k >= 12; k--) if (++counter[k] != 0) break; // inc32, big endian
+                var ks = Ecb(counter);
+                int n = Math.Min(16, ctLen - off);
+                for (int k = 0; k < n; k++) plain[off + k] = (byte)(ct[off + k] ^ ks[k]);
+            }
+            return plain;
+        }
+
+        /// <summary>Decompresses a gzip stream, or returns null if it is not valid gzip.</summary>
+        public static byte[]? Gunzip(byte[] data)
+        {
+            try
+            {
+                using var input = new MemoryStream(data);
+                using var gz = new GZipStream(input, CompressionMode.Decompress);
+                using var output = new MemoryStream();
+                gz.CopyTo(output);
+                return output.ToArray();
+            }
+            catch (InvalidDataException) { return null; }
         }
 
         // ---- hashing / helpers ---------------------------------------------------------------------

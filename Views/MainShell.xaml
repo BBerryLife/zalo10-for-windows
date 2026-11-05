@@ -125,10 +125,10 @@
                                 <PersonPicture Grid.Column="0" Width="44" Height="44" DisplayName="{x:Bind Title}" ProfilePicture="{x:Bind Picture}"/>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                                     <TextBlock Text="{x:Bind Title}" FontSize="15" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{x:Bind Preview}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                    <TextBlock Text="{x:Bind Preview, Mode=OneWay}" FontSize="13" TextTrimming="CharacterEllipsis"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
-                                <TextBlock Grid.Column="2" Text="{x:Bind Time}" FontSize="12" VerticalAlignment="Top"
+                                <TextBlock Grid.Column="2" Text="{x:Bind Time, Mode=OneWay}" FontSize="12" VerticalAlignment="Top"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                             </Grid>
                         </DataTemplate>

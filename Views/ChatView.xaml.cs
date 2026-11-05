@@ -60,6 +60,13 @@ namespace zalo10_for_windows.Views
             ScrollToEnd();
         }
 
+        /// <summary>Swap a bubble in place (a recalled message changes its text).</summary>
+        public void Replace(string msgId, MessageItem item)
+        {
+            for (int i = 0; i < Messages.Count; i++)
+                if (Messages[i].MsgId == msgId) { Messages[i] = item; return; }
+        }
+
         public void SetStatus(string? text)
         {
             StatusBar.Text = text ?? "";
