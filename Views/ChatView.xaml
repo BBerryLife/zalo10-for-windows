@@ -71,19 +71,51 @@
         <TextBlock x:Name="StatusBar" Grid.Row="3" Padding="16,4" FontSize="12" Foreground="#D13438"
                    Visibility="Collapsed"/>
 
-        <!-- Input -->
-        <Grid Grid.Row="4" Padding="12,8" ColumnSpacing="8"
+        <!-- Input: one wide rounded bar with the icons inside it.
+             Order: attach | text | send | timed message | emoticon. The icons are white masks tinted with the theme colour. -->
+        <Grid Grid.Row="4" Padding="12,10"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="InputBox" Grid.Column="0" AcceptsReturn="True" TextWrapping="Wrap"
-                     MaxHeight="120" PreviewKeyDown="InputBox_PreviewKeyDown"/>
-            <Button Grid.Column="1" VerticalAlignment="Bottom" Style="{StaticResource AccentButtonStyle}"
-                    Click="Send_Click" ToolTipService.ToolTip="Gửi (Enter)">
-                <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE724;" FontSize="16"/>
-            </Button>
+            <Border CornerRadius="10" Padding="4,2"
+                    Background="{ThemeResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" VerticalAlignment="Bottom" Width="48" Height="48" Padding="0"
+                        Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Đính kèm (chưa hỗ trợ)">
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_attach.png" ShowAsMonochrome="True" Width="32" Height="32"/>
+                </Button>
+                    <TextBox x:Name="InputBox" Grid.Column="1" AcceptsReturn="True" TextWrapping="Wrap"
+                             MaxHeight="120" VerticalAlignment="Bottom" FontSize="15" Margin="0,0,0,6"
+                             Background="Transparent" BorderThickness="0" PreviewKeyDown="InputBox_PreviewKeyDown">
+                        <TextBox.Resources>
+                            <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
+                            <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
+                            <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+                            <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent"/>
+                            <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent"/>
+                            <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent"/>
+                        </TextBox.Resources>
+                    </TextBox>
+                <Button Grid.Column="2" VerticalAlignment="Bottom" Width="48" Height="48" Padding="0"
+                        Background="Transparent" BorderThickness="0" Click="Send_Click" ToolTipService.ToolTip="Gửi (Enter)">
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_send.png" ShowAsMonochrome="True" Width="32" Height="32" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                </Button>
+                <Button Grid.Column="3" VerticalAlignment="Bottom" Width="48" Height="48" Padding="0"
+                        Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Tin nhắn hẹn giờ (chưa hỗ trợ)">
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_timemess.png" ShowAsMonochrome="True" Width="32" Height="32"/>
+                </Button>
+                <Button Grid.Column="4" VerticalAlignment="Bottom" Width="48" Height="48" Padding="0"
+                        Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Biểu tượng cảm xúc (chưa hỗ trợ)">
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_emoticon.png" ShowAsMonochrome="True" Width="32" Height="32"/>
+                </Button>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

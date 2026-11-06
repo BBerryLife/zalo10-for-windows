@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="zalo10_for_windows.Views.ContactsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="using:zalo10_for_windows.Views">
+
+    <UserControl.Resources>
+        <!-- Rows fill the list width and are as tall as their content. -->
+        <Style x:Key="PlainItemStyle" TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+        </Style>
+
+        <Style x:Key="MenuItemStyle" TargetType="ListViewItem" BasedOn="{StaticResource PlainItemStyle}">
+            <Setter Property="MinHeight" Value="52"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+
+        <DataTemplate x:Key="ContactTemplate" x:DataType="views:ContactRow">
+            <Grid>
+                <TextBlock Text="{x:Bind Letter}" Visibility="{x:Bind HeaderVisibility}"
+                           FontSize="16" FontWeight="SemiBold" Margin="0,14,0,2"/>
+                <Grid Visibility="{x:Bind RowVisibility}" ColumnSpacing="16" Padding="0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <PersonPicture Grid.Column="0" Width="56" Height="56"
+                                   DisplayName="{x:Bind Title}" ProfilePicture="{x:Bind Picture}"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="{x:Bind Title}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{x:Bind Subtitle}" Visibility="{x:Bind SubtitleVisibility}" FontSize="13"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    <Button Grid.Column="2" Background="Transparent" BorderThickness="0" VerticalAlignment="Center">
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE712;" FontSize="16"/>
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Nhắn tin" Tag="{x:Bind}" Click="MenuChat_Click"/>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </Grid>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ReceivedTemplate" x:DataType="views:RequestRow">
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <PersonPicture Width="48" Height="48" DisplayName="{x:Bind Name}" ProfilePicture="{x:Bind Picture}"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{x:Bind Subtitle}" Visibility="{x:Bind SubtitleVisibility}" FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </Grid>
+                    <Border Grid.Row="1" Visibility="{x:Bind MessageVisibility}" CornerRadius="4" Padding="10"
+                            Background="{ThemeResource ControlFillColorSecondaryBrush}">
+                        <TextBlock Text="{x:Bind Message}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"/>
+                    </Border>
+                    <Grid Grid.Row="2" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Content="Từ chối" HorizontalAlignment="Stretch" Tag="{x:Bind}"
+                                IsEnabled="{x:Bind CanAct, Mode=OneWay}" Click="Reject_Click"/>
+                        <Button Grid.Column="1" Content="Đồng ý" HorizontalAlignment="Stretch" Tag="{x:Bind}"
+                                Background="#E5EFFF" Foreground="#0068FF"
+                                IsEnabled="{x:Bind CanAct, Mode=OneWay}" Click="Accept_Click"/>
+                    </Grid>
+                    <TextBlock Grid.Row="3" Text="{x:Bind Error, Mode=OneWay}" Visibility="{x:Bind ErrorVisibility, Mode=OneWay}"
+                               TextWrapping="Wrap" FontSize="12" Foreground="#D13438"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SentTemplate" x:DataType="views:RequestRow">
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <PersonPicture Width="48" Height="48" DisplayName="{x:Bind Name}" ProfilePicture="{x:Bind Picture}"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{x:Bind Subtitle}" FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Grid>
+                    <Button Grid.Row="1" Content="Thu hồi lời mời" HorizontalAlignment="Stretch" Tag="{x:Bind}"
+                            IsEnabled="{x:Bind CanAct, Mode=OneWay}" Click="Undo_Click"/>
+                    <TextBlock Grid.Row="2" Text="{x:Bind Error, Mode=OneWay}" Visibility="{x:Bind ErrorVisibility, Mode=OneWay}"
+                               TextWrapping="Wrap" FontSize="12" Foreground="#D13438"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SuggestionTemplate" x:DataType="views:RequestRow">
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="16">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <PersonPicture Width="48" Height="48" DisplayName="{x:Bind Name}" ProfilePicture="{x:Bind Picture}"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind Name}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{x:Bind Subtitle}" Visibility="{x:Bind SubtitleVisibility}" FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left: search + the four contact sections -->
+        <Grid Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}"
+              BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Padding="16,16,12,8" ColumnSpacing="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <AutoSuggestBox PlaceholderText="Tìm kiếm" QueryIcon="Find"/>
+                <Button Grid.Column="1" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Thêm bạn">
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_add_contact.png" ShowAsMonochrome="True" Width="18" Height="18"/>
+                </Button>
+                <Button Grid.Column="2" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Tạo nhóm">
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_create_group.png" ShowAsMonochrome="True" Width="18" Height="18"/>
+                </Button>
+            </Grid>
+
+            <ListView x:Name="MenuList" Grid.Row="1" Margin="8,4,8,0" SelectionChanged="MenuList_SelectionChanged"
+                      ItemContainerStyle="{StaticResource MenuItemStyle}">
+                <ListView.Resources>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#1A0068FF"/>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#260068FF"/>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="#330068FF"/>
+                    <SolidColorBrush x:Key="ListViewItemSelectionIndicatorBrush" Color="Transparent"/>
+                </ListView.Resources>
+                <ListViewItem>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_contact.png" ShowAsMonochrome="True" Width="22" Height="22"/>
+                        <TextBlock Text="Danh sách bạn bè" FontSize="15" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_groups.png" ShowAsMonochrome="True" Width="22" Height="22"/>
+                        <TextBlock Text="Danh sách nhóm và cộng đồng" FontSize="15" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_add_contact.png" ShowAsMonochrome="True" Width="22" Height="22"/>
+                        <TextBlock Text="Lời mời kết bạn" FontSize="15" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_create_group.png" ShowAsMonochrome="True" Width="22" Height="22"/>
+                        <TextBlock Text="Lời mời vào nhóm và cộng đồng" FontSize="15" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListViewItem>
+            </ListView>
+        </Grid>
+
+        <!-- Right: header + page -->
+        <Grid Grid.Column="1" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="64"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="24,0,16,0" ColumnSpacing="12"
+                  BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <BitmapIcon x:Name="HeaderIcon" ShowAsMonochrome="True" Width="24" Height="24"
+                            UriSource="ms-appx:///Assets/Icons/ic_contact.png"/>
+                <TextBlock x:Name="HeaderTitle" Grid.Column="1" FontSize="18" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Text="Danh sách bạn bè"/>
+                <Button x:Name="RefreshButton" Grid.Column="2" Background="Transparent" BorderThickness="0"
+                        Visibility="Collapsed" Click="Refresh_Click" ToolTipService.ToolTip="Tải lại">
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_sync.png" ShowAsMonochrome="True" Width="18" Height="18"/>
+                </Button>
+            </Grid>
+
+            <Grid Grid.Row="1">
+                <!-- Friends -->
+                <Grid x:Name="FriendsPage" Padding="24,16,24,0" RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="FriendsCount" FontSize="16" FontWeight="SemiBold"/>
+                    <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8,8,0,0" Padding="20,16,12,0">
+                        <Grid RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid ColumnSpacing="12" Margin="0,0,8,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="190"/>
+                                    <ColumnDefinition Width="150"/>
+                                </Grid.ColumnDefinitions>
+                                <AutoSuggestBox x:Name="FriendSearch" PlaceholderText="Tìm bạn" QueryIcon="Find"
+                                                TextChanged="FriendSearch_TextChanged"/>
+                                <ComboBox x:Name="FriendSort" Grid.Column="1" HorizontalAlignment="Stretch" SelectedIndex="0"
+                                          SelectionChanged="Friend_OptionChanged">
+                                    <ComboBoxItem Content="Tên (A-Z)"/>
+                                    <ComboBoxItem Content="Tên (Z-A)"/>
+                                </ComboBox>
+                                <ComboBox x:Name="FriendFilter" Grid.Column="2" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                    <ComboBoxItem Content="Tất cả"/>
+                                </ComboBox>
+                            </Grid>
+                            <ListView x:Name="FriendList" Grid.Row="1" SelectionMode="None" IsItemClickEnabled="True"
+                                      ItemClick="ContactList_ItemClick" ItemTemplate="{StaticResource ContactTemplate}"
+                                      ItemContainerStyle="{StaticResource PlainItemStyle}"/>
+                            <TextBlock x:Name="FriendsEmpty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       TextAlignment="Center" TextWrapping="Wrap"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Groups and communities -->
+                <Grid x:Name="GroupsPage" Padding="24,16,24,0" RowSpacing="12" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="GroupsCount" FontSize="16" FontWeight="SemiBold"/>
+                    <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8,8,0,0" Padding="20,16,12,0">
+                        <Grid RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid ColumnSpacing="12" Margin="0,0,8,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="190"/>
+                                    <ColumnDefinition Width="150"/>
+                                </Grid.ColumnDefinitions>
+                                <AutoSuggestBox x:Name="GroupSearch" PlaceholderText="Tìm kiếm..." QueryIcon="Find"
+                                                TextChanged="GroupSearch_TextChanged"/>
+                                <ComboBox x:Name="GroupSort" Grid.Column="1" HorizontalAlignment="Stretch" SelectedIndex="0"
+                                          SelectionChanged="Group_OptionChanged">
+                                    <ComboBoxItem Content="Tên (A-Z)"/>
+                                    <ComboBoxItem Content="Tên (Z-A)"/>
+                                </ComboBox>
+                                <ComboBox x:Name="GroupFilter" Grid.Column="2" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                    <ComboBoxItem Content="Tất cả"/>
+                                </ComboBox>
+                            </Grid>
+                            <ListView x:Name="GroupList" Grid.Row="1" SelectionMode="None" IsItemClickEnabled="True"
+                                      ItemClick="ContactList_ItemClick" ItemTemplate="{StaticResource ContactTemplate}"
+                                      ItemContainerStyle="{StaticResource PlainItemStyle}"/>
+                            <TextBlock x:Name="GroupsEmpty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       TextAlignment="Center" TextWrapping="Wrap"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Friend requests -->
+                <ScrollViewer x:Name="InvitesPage" Visibility="Collapsed">
+                    <StackPanel Padding="24,16,24,24" Spacing="12">
+                        <TextBlock x:Name="InvitesStatus" TextWrapping="Wrap" Visibility="Collapsed"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                        <StackPanel x:Name="ReceivedSection" Spacing="12">
+                            <TextBlock x:Name="ReceivedHeader" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="ReceivedError" TextWrapping="Wrap" Visibility="Collapsed" Foreground="#D13438"/>
+                            <ItemsRepeater x:Name="ReceivedList" ItemTemplate="{StaticResource ReceivedTemplate}">
+                                <ItemsRepeater.Layout>
+                                    <UniformGridLayout MinItemWidth="300" MinColumnSpacing="12" MinRowSpacing="12" ItemsStretch="Fill"/>
+                                </ItemsRepeater.Layout>
+                            </ItemsRepeater>
+                        </StackPanel>
+
+                        <StackPanel x:Name="SentSection" Spacing="12" Margin="0,8,0,0">
+                            <TextBlock x:Name="SentHeader" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="SentError" TextWrapping="Wrap" Visibility="Collapsed" Foreground="#D13438"/>
+                            <ItemsRepeater x:Name="SentList" ItemTemplate="{StaticResource SentTemplate}">
+                                <ItemsRepeater.Layout>
+                                    <UniformGridLayout MinItemWidth="300" MinColumnSpacing="12" MinRowSpacing="12" ItemsStretch="Fill"/>
+                                </ItemsRepeater.Layout>
+                            </ItemsRepeater>
+                        </StackPanel>
+
+                        <Expander x:Name="SuggestionsSection" Margin="0,8,0,0" HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch" IsExpanded="False">
+                            <Expander.Header>
+                                <TextBlock x:Name="SuggestionsHeader" FontSize="16" FontWeight="SemiBold"/>
+                            </Expander.Header>
+                            <ItemsRepeater x:Name="SuggestionList" ItemTemplate="{StaticResource SuggestionTemplate}">
+                                <ItemsRepeater.Layout>
+                                    <UniformGridLayout MinItemWidth="300" MinColumnSpacing="12" MinRowSpacing="12" ItemsStretch="Fill"/>
+                                </ItemsRepeater.Layout>
+                            </ItemsRepeater>
+                        </Expander>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Group invitations: no data source yet -->
+                <TextBlock x:Name="GroupInvitesPage" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Text="Chưa hỗ trợ xem lời mời vào nhóm và cộng đồng."/>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

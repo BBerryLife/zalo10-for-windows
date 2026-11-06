@@ -58,11 +58,11 @@
                 <Button x:Name="ChatNav" Style="{StaticResource RailButtonStyle}"
                         Background="{StaticResource RailSelectedBrush}" Click="Nav_Click"
                         ToolTipService.ToolTip="Tin nhắn">
-                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8BD;" FontSize="22" Foreground="White"/>
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_chat.png" ShowAsMonochrome="True" Width="22" Height="22" Foreground="White"/>
                 </Button>
                 <Button x:Name="ContactsNav" Style="{StaticResource RailButtonStyle}" Click="Nav_Click"
                         ToolTipService.ToolTip="Danh bạ">
-                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE77B;" FontSize="22" Foreground="White"/>
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_contact.png" ShowAsMonochrome="True" Width="22" Height="22" Foreground="White"/>
                 </Button>
             </StackPanel>
 
@@ -77,13 +77,13 @@
                     <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE821;" FontSize="22" Foreground="White"/>
                 </Button>
                 <Button Style="{StaticResource RailButtonStyle}" ToolTipService.ToolTip="Cài đặt">
-                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE713;" FontSize="22" Foreground="White"/>
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_settings.png" ShowAsMonochrome="True" Width="22" Height="22" Foreground="White"/>
                 </Button>
             </StackPanel>
         </Grid>
 
         <!-- Column 1: conversation list -->
-        <Grid Grid.Column="1" Background="{ThemeResource LayerFillColorDefaultBrush}"
+        <Grid x:Name="ChatsPane" Grid.Column="1" Background="{ThemeResource LayerFillColorDefaultBrush}"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -99,10 +99,10 @@
                 </Grid.ColumnDefinitions>
                 <AutoSuggestBox Grid.Column="0" PlaceholderText="Tìm kiếm" QueryIcon="Find"/>
                 <Button Grid.Column="1" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Thêm bạn">
-                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8FA;" FontSize="16"/>
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_add_contact.png" ShowAsMonochrome="True" Width="18" Height="18"/>
                 </Button>
                 <Button Grid.Column="2" Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Tạo nhóm">
-                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE716;" FontSize="16"/>
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_create_group.png" ShowAsMonochrome="True" Width="18" Height="18"/>
                 </Button>
             </Grid>
 
@@ -141,7 +141,7 @@
         </Grid>
 
         <!-- Column 2: welcome panel until a conversation is opened, then the chat -->
-        <Grid Grid.Column="2" Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <Grid x:Name="ChatHost" Grid.Column="2" Background="{ThemeResource LayerFillColorDefaultBrush}">
             <Grid x:Name="WelcomeHost">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="520">
                     <Image Source="ms-appx:///Assets/Square150x150Logo.png" Width="120" Height="120"/>
@@ -155,5 +155,8 @@
             </Grid>
             <views:ChatView x:Name="Chat" Visibility="Collapsed"/>
         </Grid>
+
+        <!-- Danh bạ tab: replaces columns 1 and 2 while selected -->
+        <views:ContactsView x:Name="Contacts" Grid.Column="1" Grid.ColumnSpan="2" Visibility="Collapsed"/>
     </Grid>
 </UserControl>

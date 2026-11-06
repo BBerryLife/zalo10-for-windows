@@ -38,6 +38,12 @@ namespace zalo10_for_windows
 
             Shell.ConversationSelected += c => _ = OpenConversationAsync(c);
             Shell.SendRequested += (c, text) => _ = SendMessageAsync(c, text);
+
+            var contacts = Shell.ContactsPane;
+            contacts.InvitesRequested += force => _ = LoadInvitesAsync(force);
+            contacts.AcceptRequested += r => _ = RespondToRequestAsync(r, RequestAction.Accept);
+            contacts.RejectRequested += r => _ = RespondToRequestAsync(r, RequestAction.Reject);
+            contacts.UndoRequested += r => _ = RespondToRequestAsync(r, RequestAction.Undo);
         }
 
         private void Root_Loaded(object sender, RoutedEventArgs e) => _ = StartAsync();
@@ -204,6 +210,14 @@ namespace zalo10_for_windows
                 return;
             }
 
+            // Danh bạ tab: friends and groups each get their own list.
+            Shell.ContactsPane.SetFriends(
+                friends.Status == ApiStatus.Ok ? friends.Value : null,
+                friends.Status == ApiStatus.Ok ? null : $"Không tải được danh sách bạn bè.\n{friends.Message}");
+            Shell.ContactsPane.SetGroups(
+                groups.Status == ApiStatus.Ok ? groups.Value : null,
+                groups.Status == ApiStatus.Ok ? null : $"Không tải được danh sách nhóm.\n{groups.Message}");
+
             var all = new List<ContactInfo>();
             if (friends.Status == ApiStatus.Ok && friends.Value != null) all.AddRange(friends.Value);
             if (groups.Status == ApiStatus.Ok && groups.Value != null) all.AddRange(groups.Value);
@@ -229,6 +243,95 @@ namespace zalo10_for_windows
                 }));
         }
 
+
+        // ---- friend requests (Danh bạ tab) -------------------------------------------------------
+        private enum RequestAction { Accept, Reject, Undo }
+
+        private DateTime _invitesLoadedAt = DateTime.MinValue;
+        private bool _invitesLoading;
+
+        /// <summary>Received, sent and suggested requests. Without force, a load within the last 15 s is reused.</summary>
+        private async Task LoadInvitesAsync(bool force)
+        {
+            if (_invitesLoading) return;
+            if (!force && DateTime.UtcNow - _invitesLoadedAt < TimeSpan.FromSeconds(15)) return;
+            _invitesLoading = true;
+            try
+            {
+                var ct = _cts.Token;
+                var contacts = Shell.ContactsPane;
+                contacts.SetInvitesLoading();
+
+                var api = new ZaloApi(_http, _session);
+                var recvTask = api.GetFriendRequestsAsync(ct);
+                var sentTask = api.GetSentFriendRequestsAsync(ct);
+                await Task.WhenAll(recvTask, sentTask);
+                if (ct.IsCancellationRequested) return;
+
+                var recv = recvTask.Result;
+                var sent = sentTask.Result;
+                if (recv.Status == ApiStatus.SessionExpired || sent.Status == ApiStatus.SessionExpired)
+                {
+                    await ReturnToLoginAsync();
+                    return;
+                }
+
+                bool recvOk = recv.Status == ApiStatus.Ok && recv.Value != null;
+                bool sentOk = sent.Status == ApiStatus.Ok && sent.Value != null;
+                contacts.SetInvites(
+                    recvOk ? recv.Value : null, recvOk ? null : $"Không tải được lời mời đã nhận. {recv.Message}",
+                    sentOk ? sent.Value : null, sentOk ? null : $"Không tải được lời mời đã gửi. {sent.Message}");
+                contacts.MarkInvitesLoaded();
+                if (recvOk) _invitesLoadedAt = DateTime.UtcNow;
+            }
+            finally { _invitesLoading = false; }
+        }
+
+        private async Task RespondToRequestAsync(RequestRow row, RequestAction action)
+        {
+            var ct = _cts.Token;
+            row.SetBusy(true, null);
+            var api = new ZaloApi(_http, _session);
+            var r = action switch
+            {
+                RequestAction.Accept => await api.AcceptFriendRequestAsync(row.Id, ct),
+                RequestAction.Reject => await api.RejectFriendRequestAsync(row.Id, ct),
+                _ => await api.UndoFriendRequestAsync(row.Id, ct),
+            };
+            if (ct.IsCancellationRequested) return;
+
+            switch (r.Status)
+            {
+                case ApiStatus.Ok:
+                    Shell.ContactsPane.RemoveRequest(row);
+                    if (action == RequestAction.Accept) _ = RefreshFriendsAsync(row);
+                    break;
+
+                case ApiStatus.SessionExpired:
+                    await ReturnToLoginAsync();
+                    break;
+
+                default:
+                    row.SetBusy(false, $"Không thực hiện được: {r.Message ?? "lỗi không rõ"}");
+                    break;
+            }
+        }
+
+        /// <summary>After accepting a request: reload friends and make the new friend available in the chat list.</summary>
+        private async Task RefreshFriendsAsync(RequestRow accepted)
+        {
+            var ct = _cts.Token;
+            var friends = await new ZaloApi(_http, _session).GetFriendsAsync(ct);
+            if (ct.IsCancellationRequested || friends.Status != ApiStatus.Ok || friends.Value == null) return;
+
+            Shell.ContactsPane.SetFriends(friends.Value, null);
+            var f = friends.Value.FirstOrDefault(x => x.Id == accepted.Id);
+            if (f != null)
+                Shell.AddConversationIfMissing(new ConversationItem(f.Name, "", "")
+                {
+                    ThreadId = f.Id, IsGroup = false, AvatarUrl = f.AvatarUrl,
+                });
+        }
 
         // ---- realtime (WebSocket) ----------------------------------------------------------------
         private ZaloWebSocket? _ws;
@@ -375,6 +478,7 @@ namespace zalo10_for_windows
             StopRealtime();
             _chatCache.Clear();
             _historyLoaded.Clear();
+            _invitesLoadedAt = DateTime.MinValue;
             await ZaloSessionStore.DeleteAsync();
             StartFresh();
             Shell.Visibility = Visibility.Collapsed;

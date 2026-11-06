@@ -52,7 +52,7 @@ namespace zalo10_for_windows.Views
         /// <summary>
         /// Created on first read, which happens when the list realises this row on screen.
         /// That way a few hundred contacts do not trigger a few hundred image downloads at once.
-        /// Null (initials are shown instead) when the contact has no usable avatar.
+        /// Without a usable avatar a group gets Zalo10's default group picture; a friend shows initials (null).
         /// </summary>
         public ImageSource? Picture
         {
@@ -64,6 +64,8 @@ namespace zalo10_for_windows.Views
                     if (Uri.TryCreate(AvatarUrl, UriKind.Absolute, out var uri) &&
                         (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
                         _picture = new BitmapImage(uri) { DecodePixelWidth = 88 };
+                    else if (IsGroup)
+                        _picture = new BitmapImage(new Uri("ms-appx:///Assets/Icons/default_group.png")) { DecodePixelWidth = 88 };
                 }
                 return _picture;
             }
@@ -94,10 +96,62 @@ namespace zalo10_for_windows.Views
             Conversations.CollectionChanged += (_, _) => UpdateEmpty();
             UpdateEmpty();
 
+            Contacts.OpenChatRequested += (id, _) => OpenThread(id);
+
             Chat.SendRequested += text =>
             {
                 if (_current != null) SendRequested?.Invoke(_current, text);
             };
+        }
+
+        /// <summary>The Danh bạ tab.</summary>
+        public ContactsView ContactsPane => Contacts;
+
+        /// <summary>Switch to the Tin nhắn tab and open this conversation, if it is in the list.</summary>
+        private void OpenThread(string threadId)
+        {
+            var item = Conversations.FirstOrDefault(c => c.ThreadId == threadId);
+            if (item == null) return;
+            ShowChats();
+            if (ReferenceEquals(ConversationList.SelectedItem, item))
+            {
+                // Already selected: SelectionChanged will not fire, so just make sure the chat is showing.
+                if (_current != null && ReferenceEquals(_current, item))
+                {
+                    WelcomeHost.Visibility = Visibility.Collapsed;
+                    Chat.Visibility = Visibility.Visible;
+                }
+                return;
+            }
+            ConversationList.SelectedItem = item;
+            ConversationList.ScrollIntoView(item);
+        }
+
+        /// <summary>Adds a conversation at the top (for example a friend just accepted), unless it exists.</summary>
+        public void AddConversationIfMissing(ConversationItem item)
+        {
+            if (Conversations.Any(c => c.ThreadId == item.ThreadId)) return;
+            Conversations.Insert(0, item);
+        }
+
+        private void ShowChats()
+        {
+            ChatsPane.Visibility = Visibility.Visible;
+            ChatHost.Visibility = Visibility.Visible;
+            Contacts.Visibility = Visibility.Collapsed;
+            var selected = (Brush)Resources["RailSelectedBrush"];
+            ChatNav.Background = selected;
+            ContactsNav.Background = new SolidColorBrush(Colors.Transparent);
+        }
+
+        private void ShowContacts()
+        {
+            ChatsPane.Visibility = Visibility.Collapsed;
+            ChatHost.Visibility = Visibility.Collapsed;
+            Contacts.Visibility = Visibility.Visible;
+            var selected = (Brush)Resources["RailSelectedBrush"];
+            ContactsNav.Background = selected;
+            ChatNav.Background = new SolidColorBrush(Colors.Transparent);
         }
 
         // ---- chat -----------------------------------------------------------------------------------
@@ -186,10 +240,8 @@ namespace zalo10_for_windows.Views
 
         private void Nav_Click(object sender, RoutedEventArgs e)
         {
-            var selected = (Brush)Resources["RailSelectedBrush"];
-            var none = new SolidColorBrush(Colors.Transparent);
-            ChatNav.Background = ReferenceEquals(sender, ChatNav) ? selected : none;
-            ContactsNav.Background = ReferenceEquals(sender, ContactsNav) ? selected : none;
+            if (ReferenceEquals(sender, ContactsNav)) ShowContacts();
+            else ShowChats();
         }
 
         private void Tab_Click(object sender, RoutedEventArgs e)

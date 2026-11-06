@@ -34,14 +34,14 @@ namespace zalo10_for_windows.Core
     public sealed record ChatMessage(string MsgId, string SenderId, string SenderName, long TimeMs, bool IsMine, string Text);
 
     /// <summary>A friend or a group, as needed by the conversation list.</summary>
-    public sealed record ContactInfo(string Id, string Name, string AvatarUrl, bool IsGroup);
+    public sealed record ContactInfo(string Id, string Name, string AvatarUrl, bool IsGroup, int MemberCount = 0);
 
     /// <summary>
     /// Calls made after login. Every request carries its parameters AES-encrypted with the
     /// session secretKey, and every reply comes back encrypted the same way.
     /// Port of Zalo10's fetchFriends / fetchConversations / fetchGroupDetails.
     /// </summary>
-    public sealed class ZaloApi
+    public sealed partial class ZaloApi
     {
         private const string Referer = "https://chat.zalo.me/";
         private readonly ZaloHttp _http;
@@ -141,7 +141,9 @@ namespace zalo10_for_windows.Core
                     if (id.Length == 0) continue;
                     string name = Str(g, "name");
                     if (name.Length == 0) name = "Nhóm " + (id.Length > 6 ? id[^6..] : id); // same fallback as Zalo10
-                    result.Add(new ContactInfo(id, name, Str(g, "avt"), true));
+                    int members = int.TryParse(Str(g, "totalMember"), out var tm) ? tm : 0;
+                    if (members <= 0) members = ArrayLength(g, "memberIds", "memVerList");
+                    result.Add(new ContactInfo(id, name, Str(g, "avt"), true, members));
                 }
                 Log($"getmg: {result.Count} chi tiet nhom");
                 return new(ApiStatus.Ok, result);
@@ -433,6 +435,14 @@ namespace zalo10_for_windows.Core
                 JsonValueKind.String when int.TryParse(v.GetString(), out var n) => n,
                 _ => 0
             };
+        }
+
+        private static int ArrayLength(JsonElement e, params string[] names)
+        {
+            foreach (var n in names)
+                if (e.ValueKind == JsonValueKind.Object && e.TryGetProperty(n, out var a) && a.ValueKind == JsonValueKind.Array)
+                    return a.GetArrayLength();
+            return 0;
         }
 
         internal static string Str(JsonElement e, string name)

@@ -15,7 +15,7 @@
   <mp:PhoneIdentity PhoneProductId="9e44b601-ce88-4a14-a674-b85ba3299fbb" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>zalo10-for-windows</DisplayName>
+    <DisplayName>Zalo10</DisplayName>
     <PublisherDisplayName>Hoang</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -34,12 +34,12 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="zalo10-for-windows"
-        Description="zalo10-for-windows"
+        DisplayName="Zalo10"
+        Description="Zalo10"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:DefaultTile ShortName="Zalo10" Wide310x150Logo="Assets\Wide310x150Logo.png" />
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
     </Application>
