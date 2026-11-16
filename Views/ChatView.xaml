@@ -71,13 +71,11 @@
         <TextBlock x:Name="StatusBar" Grid.Row="3" Padding="16,4" FontSize="12" Foreground="#D13438"
                    Visibility="Collapsed"/>
 
-        <!-- Input: one wide rounded bar with the icons inside it.
+        <!-- Input: flat bar, only a divider line above it.
              Order: attach | text | send | timed message | emoticon. The icons are white masks tinted with the theme colour. -->
-        <Grid Grid.Row="4" Padding="12,10"
+        <Grid Grid.Row="4" Padding="12,6"
               BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-            <Border CornerRadius="10" Padding="4,2"
-                    Background="{ThemeResource ControlFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+            <Border>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -106,9 +104,9 @@
                         Background="Transparent" BorderThickness="0" Click="Send_Click" ToolTipService.ToolTip="Gửi (Enter)">
                     <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_send.png" ShowAsMonochrome="True" Width="32" Height="32" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                 </Button>
-                <Button Grid.Column="3" VerticalAlignment="Bottom" Width="48" Height="48" Padding="0"
+                <Button Grid.Column="3" VerticalAlignment="Bottom" Width="56" Height="48" Padding="0"
                         Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Tin nhắn hẹn giờ (chưa hỗ trợ)">
-                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_timemess.png" ShowAsMonochrome="True" Width="32" Height="32"/>
+                    <BitmapIcon UriSource="ms-appx:///Assets/Icons/ic_timemess.png" ShowAsMonochrome="True" Width="42" Height="42"/>
                 </Button>
                 <Button Grid.Column="4" VerticalAlignment="Bottom" Width="48" Height="48" Padding="0"
                         Background="Transparent" BorderThickness="0" ToolTipService.ToolTip="Biểu tượng cảm xúc (chưa hỗ trợ)">

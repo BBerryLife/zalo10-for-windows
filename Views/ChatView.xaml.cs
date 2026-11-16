@@ -30,7 +30,7 @@ namespace zalo10_for_windows.Views
             SubtitleText.Text = c.IsGroup ? "Nhóm" : "Bạn bè";
             HeaderAvatar.DisplayName = c.Title;
             HeaderAvatar.ProfilePicture = c.Picture;
-            InputBox.PlaceholderText = $"Nhập tin nhắn tới {c.Title}";
+            InputBox.PlaceholderText = "Nhập tin nhắn";
             InputBox.Text = "";
 
             Messages.Clear();
